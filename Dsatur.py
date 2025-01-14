@@ -1,52 +1,38 @@
-from visualize_graph import visualize_colored_graph
-
-
 def dsatur(graph):
     """
-    DSatur algorithm for graph coloring.
+    DSATUR algorithm for graph coloring.
     
     Parameters:
-        graph (dict): Adjacency list representation of the graph.
-                      Keys are vertices, and values are lists of adjacent vertices.
+        graph (dict): The adjacency list of the graph.
     
     Returns:
-        colors (dict): A dictionary mapping each vertex to its assigned color.
+        dict: A dictionary mapping vertices to their assigned color.
     """
-    # Initialize variables
-    num_vertices = len(graph)
     colors = {v: -1 for v in graph}  # -1 means uncolored
-    saturation = {v: 0 for v in graph}  # Saturation degree for each vertex
-    degrees = {v: len(graph[v]) for v in graph}  # Degree of each vertex
-
-    # Select the first vertex to color (highest degree)
-    current_vertex = max(graph, key=lambda v: degrees[v])
-
-    colors[current_vertex] = 0  # Assign the first color
-    available_colors = {v: set(range(num_vertices)) for v in graph}  # All possible colors
-    available_colors[current_vertex].remove(0)
-
-    # Update saturation for neighbors
-    for neighbor in graph[current_vertex]:
-        saturation[neighbor] += 1
-        if 0 in available_colors[neighbor]:
-            available_colors[neighbor].remove(0)
-
-    # Color remaining vertices
-    for _ in range(num_vertices - 1):
-        # Select the next vertex based on saturation (tie-breaking by degree)
-        current_vertex = max(
-            graph,
-            key=lambda v: (saturation[v], degrees[v]) if colors[v] == -1 else (-1, -1)
-        )
-
+    saturation_degree = {v: 0 for v in graph}  # Tracks saturation degree
+    degrees = {v: len(neighbors) for v, neighbors in graph.items()}  # Vertex degrees
+    
+    def update_saturation(vertex):
+        adjacent_colors = {colors[neighbor] for neighbor in graph[vertex] if colors[neighbor] != -1}
+        saturation_degree[vertex] = len(adjacent_colors)
+    
+    uncolored_vertices = set(graph.keys())
+    
+    while uncolored_vertices:
+        # Select the vertex with the highest saturation degree, breaking ties with degree
+        vertex = max(uncolored_vertices, key=lambda v: (saturation_degree[v], degrees[v]))
+        uncolored_vertices.remove(vertex)
+        
+        # Update saturation degree of its neighbors
+        for neighbor in graph[vertex]:
+            if neighbor in uncolored_vertices:
+                update_saturation(neighbor)
+        
         # Assign the smallest available color
-        chosen_color = min(available_colors[current_vertex])
-        colors[current_vertex] = chosen_color
-
-        # Update available colors for neighbors and saturation
-        for neighbor in graph[current_vertex]:
-            if colors[neighbor] == -1 and chosen_color in available_colors[neighbor]:
-                available_colors[neighbor].remove(chosen_color)
-                saturation[neighbor] = len(set(colors[n] for n in graph[neighbor] if colors[n] != -1))
-
+        neighbor_colors = {colors[neighbor] for neighbor in graph[vertex] if colors[neighbor] != -1}
+        color = 0
+        while color in neighbor_colors:
+            color += 1
+        colors[vertex] = color
+    
     return colors
